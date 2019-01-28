@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>logorrhea2</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css" integrity="sha384-" crossorigin="anonymous">
+    <link rel="stylesheet" href="front-res/css/email.css">
+</head>
+<body>
+
+<div id="mainDiv">
+</div>
+
+<script type="text/javascript" src="/app-opt.js"></script>
+<script type="text/javascript" src="/app-jsdeps.min.js"></script>
+<script src="https://yui-s.yahooapis.com/3.18.1/build/yui/yui-min.js"></script>
+<script>
+    YUI().use('node-base', 'node-event-delegate', function (Y) {
+        var menuButton = Y.one('.nav-menu-button'),
+            nav        = Y.one('#nav');
+
+        // Setting the active class name expands the menu vertically on small screens.
+        menuButton.on('click', function (e) {
+            nav.toggleClass('active');
+        });
+    });
+    Logorrhea2Main.main(document.getElementById('mainDiv'));
+</script>
+</body>
+</html>
