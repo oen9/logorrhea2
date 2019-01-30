@@ -29,7 +29,8 @@ lazy val jsSettings = Seq(
     "com.github.japgolly.scalajs-react" %%% "core" % "1.3.1",
     "com.github.japgolly.scalajs-react" %%% "extra" % "1.3.1",
     "io.suzaku" %%% "diode" % "1.1.4",
-    "io.suzaku" %%% "diode-react" % "1.1.4.131"
+    "io.suzaku" %%% "diode-react" % "1.1.4.131",
+    "org.typelevel" %%% "cats-core" % "1.5.0"
   ),
   dependencyOverrides += "org.webjars.npm" % "js-tokens" % "3.0.2", // just to resolve bug with version-range
   jsDependencies ++= Seq(

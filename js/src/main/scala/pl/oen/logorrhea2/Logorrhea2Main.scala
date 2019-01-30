@@ -3,7 +3,7 @@ package pl.oen.logorrhea2
 import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
-import pl.oen.logorrhea2.modules.{About, Layout, Room}
+import pl.oen.logorrhea2.modules._
 import pl.oen.logorrhea2.services.AppCircuit
 
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
@@ -15,26 +15,29 @@ object Logorrhea2Main {
   case object AboutLoc extends Loc("about")
   case object ChangeNameLoc extends Loc("change name")
   case object NewRoomLoc extends Loc("new room")
+  case object FullLogsLoc extends Loc("full logs")
   case class RoomLoc(roomName: String) extends Loc(roomName)
 
-  val locs: List[Loc]= List(ChangeNameLoc, NewRoomLoc, AboutLoc)
+  val locs: List[Loc]= List(ChangeNameLoc, NewRoomLoc, AboutLoc, FullLogsLoc)
 
   @JSExport
   def main(target: html.Div): Unit = {
 
-    val homeWrapper = AppCircuit.connect(_.root)
-    def layoutWrapper(ctl: RouterCtl[Loc], resolution: Resolution[Loc]) = homeWrapper(p => Layout(ctl, resolution, p))
+    val rootWrapper = AppCircuit.connect(_.root)
+    val logsWrapper = AppCircuit.connect(_.root.logs)
+    val meWrapper = AppCircuit.connect(_.root.me)
+    def layoutWrapper(ctl: RouterCtl[Loc], resolution: Resolution[Loc]) = rootWrapper(p => Layout(ctl, resolution, p))
 
     val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>
       import dsl._
 
       (emptyRule
-//        | staticRoute(root, RoomLoc) ~> render(homeWrapper(Home(_)))
         | staticRoute(root, AboutLoc) ~> render(About())
-        | staticRoute("#changename", ChangeNameLoc) ~> render(About())
-        | staticRoute("#newroom", NewRoomLoc) ~> render(About())
+        | staticRoute("#changename", ChangeNameLoc) ~> render(rootWrapper(ChangeName(_)))
+        | staticRoute("#newroom", NewRoomLoc) ~> render(meWrapper(NewRoom(_)))
         | staticRoute("#about", AboutLoc) ~> render(About())
-        | dynamicRouteCT("#room" / remainingPath.caseClass[RoomLoc]) ~> dynRender(roomName => homeWrapper(Room(roomName.name)))
+        | staticRoute("#fulllogs", FullLogsLoc) ~> render(logsWrapper(FullLogs(_)))
+        | dynamicRouteCT("#room" / remainingPath.caseClass[RoomLoc]) ~> dynRender(roomName => rootWrapper(Room(roomName.name)))
         )
         .notFound(redirectToPage(AboutLoc)(Redirect.Replace))
         .setTitle(loc => s"logorrhea2 - ${loc.name}")

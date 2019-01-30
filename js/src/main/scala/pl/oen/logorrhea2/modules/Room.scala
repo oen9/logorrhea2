@@ -6,9 +6,12 @@ import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
 import pl.oen.logorrhea2.services._
 
+import scala.scalajs.js.URIUtils
+
 object Room {
 
   case class Props(roomName: String, proxy: ModelProxy[Root])
+
   case class State(newMsg: String = "")
 
   class Backend($: BackendScope[Props, State]) {
@@ -26,26 +29,32 @@ object Room {
     }
 
     def connect(): Callback = $.props.flatMap(_.proxy.dispatchCB(PutDummyUsers))
+
     def disconnect(): Callback = $.props.flatMap(_.proxy.dispatchCB(ClearUsers))
 
     def mount(): Callback = connect() >> scrollChat()
+
     def umount(): Callback = disconnect()
 
     private val chatDiv = <.div(^.cls := "email-content-body-scrolled")
     private val chatDivRef = Ref[html.Div]
 
-    def scrollChat(): Callback = chatDivRef.foreach(chatD => { chatD.scrollTop = chatD.scrollHeight })
+    def scrollChat(): Callback = chatDivRef.foreach(chatD => {
+      chatD.scrollTop = chatD.scrollHeight
+    })
 
     def updateNewMsg(e: ReactEventFromInput): Callback = {
       val newValue = e.target.value
       $.modState(_.copy(newValue))
     }
 
-    def render(props: Props, state: State) =
-      <.div(^.cls := "email-content",
+    def render(props: Props, state: State) = {
+      val decodedRoomname = URIUtils.decodeURI(props.roomName)
+
+      <.div(^.cls := "email-content-scrolled",
         <.div(^.cls := "email-content-header pure-g",
           <.div(^.cls := "pure-u-1-2",
-            <.h1(^.cls := "email-content-title", props.roomName),
+            <.h1(^.cls := "email-content-title", decodedRoomname),
           ),
 
           <.div(^.cls := "email-content-controls pure-u-1-2",
@@ -65,7 +74,7 @@ object Room {
           <.form(^.cls := "pure-form",
             <.div(^.cls := "pure-g",
               <.div(^.cls := "pure-u-3-4",
-                <.input.text(^.cls := "pure-input-rounded", ^.width := "100%", ^.value := state.newMsg, ^.onChange ==> updateNewMsg, ^.autoFocus := true)
+                <.input.text(^.cls := "pure-input", ^.width := "100%", ^.value := state.newMsg, ^.onChange ==> updateNewMsg, ^.autoFocus := true)
               ),
               <.div(^.cls := "pure-u-1-4",
                 <.button(^.cls := "primary-button pure-button", ^.width := "100%", ^.onClick ==> send, "Send")
@@ -74,6 +83,7 @@ object Room {
           )
         )
       )
+    }
   }
 
   val component = ScalaComponent.builder[Props]("Room")

@@ -4,8 +4,10 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.router.{Resolution, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^._
 import diode.react.ModelProxy
-import pl.oen.logorrhea2.Logorrhea2Main.{Loc, locs}
-import pl.oen.logorrhea2.services.{Root, User}
+import pl.oen.logorrhea2.Logorrhea2Main.{Loc, RoomLoc, locs}
+import pl.oen.logorrhea2.services._
+
+import scala.scalajs.js.URIUtils
 
 object Layout {
 
@@ -15,15 +17,15 @@ object Layout {
 
   def locsMenu(router: RouterCtl[Loc], resolution: Resolution[Loc]): VdomArray = {
     locs.map(l => {
-      <.li(^.cls := "pure-menu-item",
+      <.li(^.key := l.name, ^.cls := "pure-menu-item",
         (^.cls := "pure-menu-selected").when(l == resolution.page),
         ^.key := l.name, router.link(l)(^.cls := "pure-menu-link", l.name))
     }).toVdomArray
   }
 
-  def userList(users: Vector[User]): VdomArray = {
+  def userList(users: Seq[User], cls: String = ""): VdomArray = {
     users.map(u => {
-      <.div(^.key := u.id, ^.cls := "email-item email-item-selectd pure-g",
+      <.div(^.key := u.id, ^.cls := s"email-item email-item-selectd pure-g $cls",
         <.div(^.cls := "pure-u",
           <.img(^.width := "64", ^.height := "64", ^.alt := "avatar", ^.cls := "email-avatar", ^.src := "front-res/img/default-user-icon-8.jpg")
         ),
@@ -37,6 +39,28 @@ object Layout {
     }).toVdomArray
   }
 
+  def logMsg(logs: Seq[LogMsg]): VdomArray = {
+    logs.zipWithIndex.map { case (log, id) =>
+      val infoTextCls = log.status match {
+        case LogOk => "info-text-ok"
+        case LogError => "info-text-error"
+      }
+      <.div(^.key := id, ^.cls := "email-item email-item-selectd pure-g",
+        <.div(^.cls := "pure-u", ^.cls := infoTextCls, log.msg)
+      )
+    }.toVdomArray
+  }
+
+  def roomsList(router: RouterCtl[Loc], resolution: Resolution[Loc], rooms: Vector[String]): VdomArray = {
+    rooms.map { roomName =>
+      val loc = RoomLoc(roomName)
+      val decodedRoomName = URIUtils.decodeURI(roomName)
+      <.li(^.key := roomName, ^.cls := "pure-menu-item",
+        (^.cls := "pure-menu-selected").when(loc == resolution.page),
+        router.link(loc)(^.cls := "pure-menu-link", decodedRoomName))
+    }.toVdomArray
+  }
+
   class Backend($: BackendScope[Props, Unit]) {
     def render(props: Props) = {
       <.div(^.id := "layout", ^.cls := "content pure-g",
@@ -48,18 +72,15 @@ object Layout {
               <.ul(^.cls := "pure-menu-list",
                 locsMenu(props.router, props.resolution),
                 <.li(^.cls := "pure-menu-heading", "rooms"),
-                <.li(^.cls := "pure-menu-item", <.a(^.href := "#room/general", ^.cls := "pure-menu-link", "general")),
-                <.li(^.cls := "pure-menu-item", <.a(^.href := "#room/second", ^.cls := "pure-menu-link", "second")),
+                roomsList(props.router, props.resolution, props.proxy.value.rooms)
               )
             )
           )
         ),
 
         <.div(^.id := "list", ^.cls := "pure-u-1",
-          userList(props.proxy.value.users),
-          <.div(^.cls := "email-item email-item-selectd pure-g",
-            <.div(^.cls := "pure-u", "no users outside room")
-          ).when(props.proxy.value.users.isEmpty)
+          props.proxy.value.me.fold(logMsg(props.proxy.value.logs.take(3)))(u => userList(Seq(u), "email-item-unread")),
+          userList(props.proxy.value.users)
         ),
 
         <.div(^.id := "main", ^.cls := "pure-u-1",

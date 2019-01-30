@@ -23,7 +23,7 @@ object About {
           ),
           <.div(^.cls := "pure-g odd-row",
             <.div(^.cls := "pure-u-1-2", "heroku"),
-            <.div(^.cls := "pure-u-1-2", <.a(^.target := "_blank", ^.href := "https://github.com/oen9/logorrhea2", "https://github.com/oen9/logorrhea2"))
+            <.div(^.cls := "pure-u-1-2", <.a(^.target := "_blank", ^.href := "https://logorrhea2.herokuapp.com/", "https://logorrhea2.herokuapp.com/"))
           )
         )
       )
