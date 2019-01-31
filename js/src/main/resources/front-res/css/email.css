@@ -238,6 +238,24 @@ a {
   padding: .5em 0em;
 }
 
+.chat-msg-name {
+  padding: .5em;
+  font-weight: bold;
+}
+
+.chat-msg-name-me {
+  color: rgb(27, 152, 248);
+}
+
+.chat-msg-id {
+  color: gray;
+  font-size: xx-small;
+}
+
+.chat-msg-content {
+  word-wrap: break-word;
+}
+
 /*
  * -- TABLET (AND UP) MEDIA QUERIES --
  * On tablets and other medium-sized devices, we want to customize some

@@ -6,6 +6,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import diode.react.ModelProxy
 import pl.oen.logorrhea2.Logorrhea2Main.{Loc, RoomLoc, locs}
 import pl.oen.logorrhea2.services._
+import cats.implicits._
 
 import scala.scalajs.js.URIUtils
 
@@ -23,9 +24,15 @@ object Layout {
     }).toVdomArray
   }
 
-  def userList(users: Seq[User], cls: String = ""): VdomArray = {
+  def userListFromRoom(t: (RoomData, User)): VdomArray = userList(t._1.users, t._2)
+
+  def userListJustMe(me: User): VdomArray = userList(Seq(me), me)
+
+  def userList(users: Seq[User], me: User): VdomArray = {
     users.map(u => {
-      <.div(^.key := u.id, ^.cls := s"email-item email-item-selectd pure-g $cls",
+      <.div(^.key := u.id,
+        ^.cls := s"email-item email-item-selectd pure-g",
+        (^.cls := "email-item-unread").when(u.id == me.id),
         <.div(^.cls := "pure-u",
           <.img(^.width := "64", ^.height := "64", ^.alt := "avatar", ^.cls := "email-avatar", ^.src := "front-res/img/default-user-icon-8.jpg")
         ),
@@ -40,7 +47,7 @@ object Layout {
   }
 
   def logMsg(logs: Seq[LogMsg]): VdomArray = {
-    logs.zipWithIndex.map { case (log, id) =>
+    logs.take(3).zipWithIndex.map { case (log, id) =>
       val infoTextCls = log.status match {
         case LogOk => "info-text-ok"
         case LogError => "info-text-error"
@@ -63,6 +70,10 @@ object Layout {
 
   class Backend($: BackendScope[Props, Unit]) {
     def render(props: Props) = {
+      val maybeMe = props.proxy.value.me
+      val maybeRoom = props.proxy.value.roomData
+      val logs = props.proxy.value.logs
+
       <.div(^.id := "layout", ^.cls := "content pure-g",
         <.div(^.id := "nav", ^.cls := "pure-u",
           <.a(^.cls := "nav-menu-button", "Menu"),
@@ -79,8 +90,10 @@ object Layout {
         ),
 
         <.div(^.id := "list", ^.cls := "pure-u-1",
-          props.proxy.value.me.fold(logMsg(props.proxy.value.logs.take(3)))(u => userList(Seq(u), "email-item-unread")),
-          userList(props.proxy.value.users)
+          (maybeRoom, maybeMe).bisequence
+            .map(userListFromRoom)
+            .orElse(maybeMe.map(userListJustMe))
+            .getOrElse(logMsg(logs))
         ),
 
         <.div(^.id := "main", ^.cls := "pure-u-1",

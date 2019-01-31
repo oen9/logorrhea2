@@ -26,6 +26,7 @@ object Logorrhea2Main {
     val rootWrapper = AppCircuit.connect(_.root)
     val logsWrapper = AppCircuit.connect(_.root.logs)
     val meWrapper = AppCircuit.connect(_.root.me)
+
     def layoutWrapper(ctl: RouterCtl[Loc], resolution: Resolution[Loc]) = rootWrapper(p => Layout(ctl, resolution, p))
 
     val routerConfig = RouterConfigDsl[Loc].buildConfig { dsl =>

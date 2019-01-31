@@ -5,6 +5,7 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
 import pl.oen.logorrhea2.services._
+import cats.implicits._
 
 import scala.scalajs.js.URIUtils
 
@@ -12,29 +13,41 @@ object Room {
 
   case class Props(roomName: String, proxy: ModelProxy[Root])
 
-  case class State(newMsg: String = "")
+  case class State(roomName: String, newMsg: String)
 
   class Backend($: BackendScope[Props, State]) {
     def send(e: ReactEvent): Callback = {
       e.preventDefault()
 
-      val sendMsg = for {
+      for {
         s <- $.state
         p <- $.props
         msg = if (s.newMsg.nonEmpty) Some(s.newMsg) else None
         _ <- msg.fold(Callback.empty)(m => p.proxy.dispatchCB(SendMsg(m)))
+        _ <- $.modState(_.copy(newMsg = ""))
       } yield ()
-
-      sendMsg >> $.modState(_ => State())
     }
 
-    def connect(): Callback = $.props.flatMap(_.proxy.dispatchCB(PutDummyUsers))
+    def enterRoom(): Callback = {
+      for {
+        p <- $.props
+        _ <- p.proxy.dispatchCB(EnterRoom(p.roomName))
+        _ <- $.modState(s => s.copy(roomName = p.roomName))
+      } yield ()
+    }
 
-    def disconnect(): Callback = $.props.flatMap(_.proxy.dispatchCB(ClearUsers))
+    def disconnect(): Callback = $.props.flatMap(_.proxy.dispatchCB(ExitRoom))
 
-    def mount(): Callback = connect() >> scrollChat()
+    def mount(): Callback = enterRoom() >> scrollChat()
 
     def umount(): Callback = disconnect()
+
+    def onUpdate() = for {
+      s <- $.state
+      p <- $.props
+      _ <- if (s.roomName == p.roomName) Callback.empty else enterRoom()
+      _ <- scrollChat()
+    } yield ()
 
     private val chatDiv = <.div(^.cls := "email-content-body-scrolled")
     private val chatDivRef = Ref[html.Div]
@@ -45,7 +58,21 @@ object Room {
 
     def updateNewMsg(e: ReactEventFromInput): Callback = {
       val newValue = e.target.value
-      $.modState(_.copy(newValue))
+      $.modState(_.copy(newMsg = newValue))
+    }
+
+    def chatContentList(room: RoomData, me: User): VdomArray = {
+      room.msgs.zipWithIndex.map { case (chatMsg, index) =>
+        val colourClass = if (index % 2 == 1) "odd-row" else "even-row"
+        <.div(^.key := index, ^.cls := colourClass,
+          <.span(^.cls := "chat-msg-id", s"(${chatMsg.user.id})"),
+          <.span(
+            ^.cls := "chat-msg-name",
+            (^.cls := "chat-msg-name-me").when(chatMsg.user.id == me.id),
+            s"${chatMsg.user.name}"),
+          <.span(^.cls := "chat-msg-content", s"${chatMsg.msg}")
+        )
+      }.toVdomArray
     }
 
     def render(props: Props, state: State) = {
@@ -64,10 +91,12 @@ object Room {
         ),
 
         chatDiv.withRef(chatDivRef)(
-          (for (m <- props.proxy.value.msgs.zipWithIndex) yield {
-            val colourClass = if (m._2 % 2 == 1) "odd-row" else "even-row"
-            <.div(^.key := m._2, ^.cls := colourClass, m._1)
-          }).toVdomArray
+          (props.proxy.value.roomData, props.proxy.value.me).bisequence
+            .fold(
+              VdomArray("connection error (please wait or refresh page)")
+            ) { case (room, me) =>
+              chatContentList(room, me)
+            }
         ),
 
         <.div(^.cls := "email-content-footer",
@@ -87,11 +116,11 @@ object Room {
   }
 
   val component = ScalaComponent.builder[Props]("Room")
-    .initialState(State())
+    .initialState(State("", ""))
     .renderBackend[Backend]
     .componentDidMount(_.backend.mount())
     .componentWillUnmount(_.backend.umount())
-    .componentDidUpdate(_.backend.scrollChat())
+    .componentDidUpdate(_.backend.onUpdate())
     .build
 
   def apply(roomName: String)(proxy: ModelProxy[Root]) = component(Props(roomName, proxy))
