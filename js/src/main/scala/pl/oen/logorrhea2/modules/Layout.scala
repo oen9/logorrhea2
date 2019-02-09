@@ -5,8 +5,9 @@ import japgolly.scalajs.react.extra.router.{Resolution, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^._
 import diode.react.ModelProxy
 import pl.oen.logorrhea2.Logorrhea2Main.{Loc, RoomLoc, locs}
-import pl.oen.logorrhea2.services._
 import cats.implicits._
+import pl.oen.logorrhea2.services.AppData._
+import pl.oen.logorrhea2.shared.User
 
 import scala.scalajs.js.URIUtils
 
@@ -39,15 +40,14 @@ object Layout {
 
         <.div(^.cls := "pure-u-3-4",
           <.h5(^.cls := "email-name", u.id),
-          <.h4(^.cls := "email-subject", u.name),
-          <.p(^.cls := "email-dsc", u.lastMsg)
+          <.h4(^.cls := "email-subject", u.name)
         )
       )
     }).toVdomArray
   }
 
   def logMsg(logs: Seq[LogMsg]): VdomArray = {
-    logs.take(3).zipWithIndex.map { case (log, id) =>
+    logs.take(10).zipWithIndex.map { case (log, id) =>
       val infoTextCls = log.status match {
         case LogOk => "info-text-ok"
         case LogError => "info-text-error"

@@ -7,10 +7,11 @@ import cats.implicits._
 import org.http4s.implicits._
 import org.http4s.server.blaze.BlazeServerBuilder
 import pl.oen.logorrhea2.config.AppConfig
+import pl.oen.logorrhea2.services.UserService
 
 import scala.concurrent.ExecutionContext
 
-object ServerMain extends IOApp {
+object App extends IOApp {
 
   override def run(args: List[String]): IO[ExitCode] = {
     createServer[IO]()
@@ -21,9 +22,12 @@ object ServerMain extends IOApp {
       conf <- AppConfig.read()
       blockingEc = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(4))
       staticEndpoints = StaticEndpoints[F](blockingEc)
+      userIdProvider <- UserService[F]()
+      chatEndpoints = ChatEndpoints[F](userIdProvider)
+      httpApp = (staticEndpoints.endpoints() <+> chatEndpoints.endpoints()).orNotFound
       exitCode <- BlazeServerBuilder[F]
         .bindHttp(conf.http.port, conf.http.host)
-        .withHttpApp(staticEndpoints.endpoints().orNotFound)
+        .withHttpApp(httpApp)
         .serve
         .compile
         .drain

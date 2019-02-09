@@ -3,7 +3,7 @@ package pl.oen.logorrhea2.modules
 import diode.react.ModelProxy
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import pl.oen.logorrhea2.services.{LogError, LogMsg, LogOk}
+import pl.oen.logorrhea2.services.AppData.{LogError, LogMsg, LogOk}
 
 object FullLogs {
 

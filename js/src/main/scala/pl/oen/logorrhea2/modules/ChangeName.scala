@@ -4,7 +4,7 @@ import cats.implicits._
 import diode.react.ModelProxy
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import pl.oen.logorrhea2.services._
+import pl.oen.logorrhea2.services.AppData.{ChangeMyName, Root}
 
 object ChangeName {
 
@@ -26,6 +26,21 @@ object ChangeName {
         p <- $.props
         nameToChange = s.newName.filter(_.nonEmpty)
         _ <- nameToChange.fold(Callback.empty)(name => p.proxy.dispatchCB(ChangeMyName(name)))
+      } yield ()
+    }
+
+    def onUpdate(): Callback = {
+      def initName(s: String): Callback = {
+        $.modState(_.copy(newName = Some(s)))
+      }
+
+      for {
+        props <- $.props
+        state <- $.state
+        nameFromMe = props.proxy.value.me.map(_.name)
+        _ <- state.newName.map(_ => Callback.empty)
+          .orElse(nameFromMe.map(initName))
+          .getOrElse(Callback.empty)
       } yield ()
     }
 
@@ -64,7 +79,7 @@ object ChangeName {
             <.div(^.cls := "pure-g odd-row",
               <.div(^.cls := "pure-u-1-5", "last msg"),
               <.div(^.cls := "pure-u-1-5"),
-              <.div(^.cls := "pure-u-1-5", me.lastMsg)
+              <.div(^.cls := "pure-u-1-5", "")
             )
           )
         },
@@ -74,6 +89,7 @@ object ChangeName {
   val component = ScalaComponent.builder[Props]("Room")
     .initialStateFromProps(props => State(props.proxy.value.me.map(_.name)))
     .renderBackend[Backend]
+    .componentDidUpdate(_.backend.onUpdate())
     .build
 
   def apply(proxy: ModelProxy[Root]) = component(Props(proxy))

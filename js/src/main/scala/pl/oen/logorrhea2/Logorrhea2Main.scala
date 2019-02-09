@@ -33,7 +33,7 @@ object Logorrhea2Main {
       import dsl._
 
       (emptyRule
-        | staticRoute(root, AboutLoc) ~> render(About())
+        | staticRoute(root, ChangeNameLoc) ~> render(rootWrapper(ChangeName(_)))
         | staticRoute("#changename", ChangeNameLoc) ~> render(rootWrapper(ChangeName(_)))
         | staticRoute("#newroom", NewRoomLoc) ~> render(meWrapper(NewRoom(_)))
         | staticRoute("#about", AboutLoc) ~> render(About())

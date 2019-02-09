@@ -1,5 +1,7 @@
 val Http4sVersion = "0.20.0-M5"
 val LogbackVersion = "1.2.3"
+val monocleVersion = "1.5.0"
+val circeVersion = "0.10.0"
 
 import sbtcrossproject.CrossPlugin.autoImport.{crossProject, CrossType}
 
@@ -9,7 +11,12 @@ lazy val sharedSettings = Seq(
   version := "0.1.0-SNAPSHOT",
   libraryDependencies ++= Seq(
     "com.lihaoyi" %%% "scalatags" % "0.6.7",
-    "org.typelevel" %% "cats-core" % "1.4.0"
+    "org.typelevel" %%% "cats-core" % "1.5.0",
+    "com.github.julien-truffaut" %% "monocle-core" % monocleVersion,
+    "com.github.julien-truffaut" %% "monocle-macro" % monocleVersion,
+    "io.circe" %%% "circe-core" % circeVersion,
+    "io.circe" %%% "circe-generic" % circeVersion,
+    "io.circe" %%% "circe-parser" % circeVersion
   ),
   scalacOptions ++= Seq(
     "-Xlint",
@@ -18,7 +25,8 @@ lazy val sharedSettings = Seq(
     "-feature",
     "-Ypartial-unification",
     "-language:higherKinds"
-  )
+  ),
+  addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.1" cross CrossVersion.full)
 )
 
 lazy val fastOptJSDev = TaskKey[Unit]("fastOptJSDev")
@@ -29,8 +37,7 @@ lazy val jsSettings = Seq(
     "com.github.japgolly.scalajs-react" %%% "core" % "1.3.1",
     "com.github.japgolly.scalajs-react" %%% "extra" % "1.3.1",
     "io.suzaku" %%% "diode" % "1.1.4",
-    "io.suzaku" %%% "diode-react" % "1.1.4.131",
-    "org.typelevel" %%% "cats-core" % "1.5.0"
+    "io.suzaku" %%% "diode-react" % "1.1.4.131"
   ),
   dependencyOverrides += "org.webjars.npm" % "js-tokens" % "3.0.2", // just to resolve bug with version-range
   jsDependencies ++= Seq(

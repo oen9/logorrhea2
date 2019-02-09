@@ -4,8 +4,9 @@ import diode.react.ModelProxy
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
-import pl.oen.logorrhea2.services._
 import cats.implicits._
+import pl.oen.logorrhea2.services.AppData._
+import pl.oen.logorrhea2.shared.User
 
 import scala.scalajs.js.URIUtils
 
