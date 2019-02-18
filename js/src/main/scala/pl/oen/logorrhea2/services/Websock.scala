@@ -1,12 +1,15 @@
 package pl.oen.logorrhea2.services
 
+import diode.{Effect, NoAction}
 import io.circe.generic.auto._
 import io.circe.parser._
+import io.circe.syntax._
 import org.scalajs.dom
 import org.scalajs.dom.{CloseEvent, Event, MessageEvent, WebSocket}
 import pl.oen.logorrhea2.services.AppData.{Connected, Disconnected}
 import pl.oen.logorrhea2.shared.{Data, User}
 
+import scala.concurrent.ExecutionContext
 import scala.scalajs.js
 
 object Websock {
@@ -42,5 +45,15 @@ object Websock {
     ws.onmessage = onmessage _
     ws.onerror = onerror _
     ws
+  }
+
+  def send(ws: dom.WebSocket, data: Data): Unit = {
+    val msg = data.asJson.noSpaces
+    ws.send(msg)
+  }
+
+  def sendAsEffect(ws: dom.WebSocket, data: Data)(implicit ec: ExecutionContext): Effect = Effect.action {
+    send(ws, data)
+    NoAction
   }
 }

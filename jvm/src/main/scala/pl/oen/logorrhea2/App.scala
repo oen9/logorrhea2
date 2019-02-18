@@ -7,7 +7,7 @@ import cats.implicits._
 import org.http4s.implicits._
 import org.http4s.server.blaze.BlazeServerBuilder
 import pl.oen.logorrhea2.config.AppConfig
-import pl.oen.logorrhea2.services.UserService
+import pl.oen.logorrhea2.services.{MessageHandler, UserService}
 
 import scala.concurrent.ExecutionContext
 
@@ -22,8 +22,9 @@ object App extends IOApp {
       conf <- AppConfig.read()
       blockingEc = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(4))
       staticEndpoints = StaticEndpoints[F](blockingEc)
-      userIdProvider <- UserService[F]()
-      chatEndpoints = ChatEndpoints[F](userIdProvider)
+      userService <- UserService[F]()
+      messageHandler = MessageHandler(userService)
+      chatEndpoints = ChatEndpoints[F](userService, messageHandler)
       httpApp = (staticEndpoints.endpoints() <+> chatEndpoints.endpoints()).orNotFound
       exitCode <- BlazeServerBuilder[F]
         .bindHttp(conf.http.port, conf.http.host)

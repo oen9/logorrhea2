@@ -4,7 +4,7 @@ import cats.implicits._
 import diode._
 import diode.react.ReactConnector
 import pl.oen.logorrhea2.services.AppData._
-import pl.oen.logorrhea2.shared.User
+import pl.oen.logorrhea2.shared.{ChangeName, User}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -53,7 +53,9 @@ class ClicksHandler[M](modelRW: ModelRW[M, Root]) extends ActionHandler(modelRW)
       }
     case ChangeMyName(newName) =>
       val newRoot = Root.me.modify(_.map(_.copy(name = newName)))
-      updated(newRoot(value))
+      val msg = ChangeName(newName)
+      updated(newRoot(value), Websock.sendAsEffect(value.ws, msg))
+
     case CreateNewRoom(roomName) =>
       val setRooms = Root.rooms.modify(_ :+ roomName)
       updated(setRooms(value))
