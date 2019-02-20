@@ -12,8 +12,9 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.websocket.WebSocketFrame
 import org.http4s.websocket.WebSocketFrame.Text
+import pl.oen.logorrhea2.services.UserService.UserInfo
 import pl.oen.logorrhea2.services.{MessageHandler, UserService}
-import pl.oen.logorrhea2.shared.{Data, LogStr, UnknownData, User}
+import pl.oen.logorrhea2.shared.{Data, LogStr, UnknownData}
 
 import scala.concurrent.duration.DurationDouble
 
@@ -27,26 +28,29 @@ class ChatEndpoints[F[_] : ConcurrentEffect : Timer](userService: UserService[F]
         .evalMap(d => messageHandler.handle(id, d))
         .map(toWebsockData)
 
-      def createWebSock(u: User, q: Queue[F, WebSocketFrame]) = {
-        val id = Stream(u).map(toWebsockData)
+      def createWebSock(ui: UserInfo[F], q: Queue[F, WebSocketFrame]) = {
+        val id = Stream(ui.u).map(toWebsockData)
         val ping = Stream.awakeEvery[F](100.seconds).map(p => toWebsockData(s"ping msg $p"))
 
-        val d = q.dequeue.through(echoReply(u.id))
+        val d = q.dequeue.through(echoReply(ui.u.id))
         val e = q.enqueue
 
         val onClose = for {
-          _ <- userService.removeUser(u.id)
+          _ <- userService.removeUser(ui.u.id)
           users <- userService.getUsers
-          _ <- Effect[F].delay(users.foreach(println))
+          _ <- Effect[F].delay(users.map(_.u).foreach(println))
         } yield ()
 
-        WebSocketBuilder[F].build(id ++ d.merge(ping), e, onClose = onClose)
+        val subbedTopic = ui.topic.subscribe(10).map(toWebsockData)
+        val out = id ++ d merge ping merge subbedTopic
+
+        WebSocketBuilder[F].build(out, e, onClose = onClose)
       }
 
       for {
-        user <- userService.genNewUser()
+        userInfo <- userService.genNewUser()
         queue <- Queue.unbounded[F, WebSocketFrame]
-        ws <- createWebSock(user, queue)
+        ws <- createWebSock(userInfo, queue)
       } yield ws
   }
 
