@@ -1,6 +1,6 @@
 package pl.oen.logorrhea2.services
 
-import cats.effect.ConcurrentEffect
+import cats.effect.{ConcurrentEffect, Effect}
 import cats.effect.concurrent.Ref
 import cats.implicits._
 import fs2.concurrent.Topic
@@ -31,6 +31,14 @@ class UserServiceImpl[F[_] : ConcurrentEffect](idCounterState: Ref[F, Long],
     val setUserName = (UserInfo.u[F] composeLens User.name).set(newName)
     if (id == ui.u.id) setUserName(ui) else ui
   })
+
+  override def publish(data: Data): F[Unit] = for {
+    receivers <- users.get
+    _ <- publish(data, receivers)
+  } yield ()
+
+  override def publish(data: Data, receivers: Vector[UserInfo[F]]): F[Unit] =
+    receivers.foldLeft(Effect[F].unit)((acc, u) => acc *> u.topic.publish1(data))
 
   private[this] def addUserToList(u: UserInfo[F]) = users.update(_ :+ u)
   private[this] def nextId(): F[Long] = idCounterState.modify(curr => (curr + 1, curr))

@@ -14,6 +14,8 @@ object AppData {
   case class SendMsg(msg: String) extends Action
   case class ChangeMyName(name: String) extends Action
   case class CreateNewRoom(name: String) extends Action
+  case class UpdateRooms(names: Vector[String]) extends Action
+  case class AddNewRoom(name: String) extends Action
 
   case object Connect extends Action
   case class Connected(user: User) extends Action
@@ -29,7 +31,7 @@ object AppData {
                           me: Option[User] = None,
                           logs: List[LogMsg] = List(logMsgOk("Connecting..."), logMsgOk("Application started")),
                           roomData: Option[RoomData] = None,
-                          rooms: Vector[String] = Vector("general", "funny", "serious"),
+                          rooms: Vector[String] = Vector.empty,
                           savedRooms: Vector[RoomData] = Vector.empty)
   case class RootModel(root: Root)
 

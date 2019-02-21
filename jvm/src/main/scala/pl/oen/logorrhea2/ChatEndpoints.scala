@@ -13,12 +13,13 @@ import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.websocket.WebSocketFrame
 import org.http4s.websocket.WebSocketFrame.Text
 import pl.oen.logorrhea2.services.UserService.UserInfo
-import pl.oen.logorrhea2.services.{MessageHandler, UserService}
-import pl.oen.logorrhea2.shared.{Data, LogStr, UnknownData}
+import pl.oen.logorrhea2.services.{MessageHandler, RoomService, UserService}
+import pl.oen.logorrhea2.shared._
 
 import scala.concurrent.duration.DurationDouble
 
 class ChatEndpoints[F[_] : ConcurrentEffect : Timer](userService: UserService[F],
+                                                     roomService: RoomService[F],
                                                      messageHandler: MessageHandler[F]) extends Http4sDsl[F] {
   def endpoints(): HttpRoutes[F] = HttpRoutes.of[F] {
     case GET -> Root / "chat" =>
@@ -28,8 +29,9 @@ class ChatEndpoints[F[_] : ConcurrentEffect : Timer](userService: UserService[F]
         .evalMap(d => messageHandler.handle(id, d))
         .map(toWebsockData)
 
-      def createWebSock(ui: UserInfo[F], q: Queue[F, WebSocketFrame]) = {
+      def createWebSock(ui: UserInfo[F], q: Queue[F, WebSocketFrame], roomNames: Vector[String]) = {
         val id = Stream(ui.u).map(toWebsockData)
+        val rooms = Stream(RoomsNames(roomNames)).map(toWebsockData)
         val ping = Stream.awakeEvery[F](100.seconds).map(p => toWebsockData(s"ping msg $p"))
 
         val d = q.dequeue.through(echoReply(ui.u.id))
@@ -42,15 +44,17 @@ class ChatEndpoints[F[_] : ConcurrentEffect : Timer](userService: UserService[F]
         } yield ()
 
         val subbedTopic = ui.topic.subscribe(10).map(toWebsockData)
-        val out = id ++ d merge ping merge subbedTopic
+        val out = id ++ rooms ++ d merge ping merge subbedTopic
 
         WebSocketBuilder[F].build(out, e, onClose = onClose)
       }
 
       for {
         userInfo <- userService.genNewUser()
+        rooms <- roomService.getRooms()
+        roomsNames = rooms.map(_.name)
         queue <- Queue.unbounded[F, WebSocketFrame]
-        ws <- createWebSock(userInfo, queue)
+        ws <- createWebSock(userInfo, queue, roomsNames)
       } yield ws
   }
 
@@ -60,6 +64,8 @@ class ChatEndpoints[F[_] : ConcurrentEffect : Timer](userService: UserService[F]
 }
 
 object ChatEndpoints {
-  def apply[F[_] : ConcurrentEffect : Timer](userService: UserService[F], messageHandler: MessageHandler[F]): ChatEndpoints[F] =
-    new ChatEndpoints[F](userService, messageHandler)
+  def apply[F[_] : ConcurrentEffect : Timer](userService: UserService[F],
+                                             roomService: RoomService[F],
+                                             messageHandler: MessageHandler[F]): ChatEndpoints[F] =
+    new ChatEndpoints[F](userService, roomService, messageHandler)
 }

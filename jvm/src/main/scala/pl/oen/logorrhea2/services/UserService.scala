@@ -12,6 +12,8 @@ trait UserService[F[_]] {
   def getUsers: F[Vector[UserInfo[F]]]
   def getUser(id: Long): F[Option[UserInfo[F]]]
   def changeName(id: Long, newName: String): F[Unit]
+  def publish(data: Data): F[Unit]
+  def publish(data: Data, receivers: Vector[UserInfo[F]]): F[Unit]
 }
 
 object UserService {

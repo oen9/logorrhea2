@@ -8,5 +8,7 @@ trait MessageHandler[F[_]] {
 }
 
 object MessageHandler {
-  def apply[F[_] : Effect](userService: UserService[F]): MessageHandler[F] = MessageHandlerImpl[F](userService)
+  def apply[F[_] : Effect](userService: UserService[F],
+                           roomService: RoomService[F]): MessageHandler[F] =
+    MessageHandlerImpl[F](userService, roomService)
 }

@@ -6,8 +6,8 @@ import io.circe.parser._
 import io.circe.syntax._
 import org.scalajs.dom
 import org.scalajs.dom.{CloseEvent, Event, MessageEvent, WebSocket}
-import pl.oen.logorrhea2.services.AppData.{Connected, Disconnected}
-import pl.oen.logorrhea2.shared.{Data, User}
+import pl.oen.logorrhea2.services.AppData.{AddNewRoom, Connected, Disconnected, UpdateRooms}
+import pl.oen.logorrhea2.shared.{Data, RoomAdded, RoomsNames, User}
 
 import scala.concurrent.ExecutionContext
 import scala.scalajs.js
@@ -22,8 +22,9 @@ object Websock {
 
     def onmessage(e: MessageEvent): Unit = {
       decode[Data](e.data.toString).fold(e => println(s"error: $e"), {
-        case u: User =>
-          AppCircuit.dispatch(Connected(u))
+        case u: User => AppCircuit.dispatch(Connected(u))
+        case RoomsNames(names) => AppCircuit.dispatch(UpdateRooms(names))
+        case RoomAdded(name) => AppCircuit.dispatch(AddNewRoom(name))
         case unknown => println(s"[ws] unsupported data: $unknown")
       })
     }
