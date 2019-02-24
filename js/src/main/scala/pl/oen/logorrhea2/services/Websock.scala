@@ -6,8 +6,8 @@ import io.circe.parser._
 import io.circe.syntax._
 import org.scalajs.dom
 import org.scalajs.dom.{CloseEvent, Event, MessageEvent, WebSocket}
-import pl.oen.logorrhea2.services.AppData.{AddNewRoom, Connected, Disconnected, UpdateRooms}
-import pl.oen.logorrhea2.shared.{Data, RoomAdded, RoomsNames, User}
+import pl.oen.logorrhea2.services.AppData._
+import pl.oen.logorrhea2.shared._
 
 import scala.concurrent.ExecutionContext
 import scala.scalajs.js
@@ -25,6 +25,9 @@ object Websock {
         case u: User => AppCircuit.dispatch(Connected(u))
         case RoomsNames(names) => AppCircuit.dispatch(UpdateRooms(names))
         case RoomAdded(name) => AppCircuit.dispatch(AddNewRoom(name))
+        case JoinedRoom(room) => AppCircuit.dispatch(EnteredRoom(room))
+        case SomeoneJoinedRoom(u) => AppCircuit.dispatch(SomeoneEntered(u))
+        case SomeoneAbandonedRoom(u) => AppCircuit.dispatch(SomeoneExitted(u))
         case unknown => println(s"[ws] unsupported data: $unknown")
       })
     }
@@ -49,8 +52,10 @@ object Websock {
   }
 
   def send(ws: dom.WebSocket, data: Data): Unit = {
-    val msg = data.asJson.noSpaces
-    ws.send(msg)
+    if (ws.readyState == 1) {
+      val msg = data.asJson.noSpaces
+      ws.send(msg)
+    }
   }
 
   def sendAsEffect(ws: dom.WebSocket, data: Data)(implicit ec: ExecutionContext): Effect = Effect.action {

@@ -94,7 +94,7 @@ object Room {
         chatDiv.withRef(chatDivRef)(
           (props.proxy.value.roomData, props.proxy.value.me).bisequence
             .fold(
-              VdomArray("connection error (please wait or refresh page)")
+              VdomArray("joining room in progress ...")
             ) { case (room, me) =>
               chatContentList(room, me)
             }

@@ -8,7 +8,7 @@ import pl.oen.logorrhea2.services.UserService.UserInfo
 import pl.oen.logorrhea2.shared.{Data, LogStr, User}
 
 class UserServiceImpl[F[_] : ConcurrentEffect](idCounterState: Ref[F, Long],
-                                     users: Ref[F, Vector[UserInfo[F]]])
+                                               users: Ref[F, Vector[UserInfo[F]]])
   extends UserService[F] {
 
   override def genNewUser(): F[UserInfo[F]] = for {
@@ -32,6 +32,11 @@ class UserServiceImpl[F[_] : ConcurrentEffect](idCounterState: Ref[F, Long],
     if (id == ui.u.id) setUserName(ui) else ui
   })
 
+  override def joinRoom(id: Long, room: Option[String]): F[Unit] = users.update(_.map(ui =>
+    if (ui.u.id == id) ui.copy(room = room)
+    else ui
+  ))
+
   override def publish(data: Data): F[Unit] = for {
     receivers <- users.get
     _ <- publish(data, receivers)
@@ -41,6 +46,7 @@ class UserServiceImpl[F[_] : ConcurrentEffect](idCounterState: Ref[F, Long],
     receivers.foldLeft(Effect[F].unit)((acc, u) => acc *> u.topic.publish1(data))
 
   private[this] def addUserToList(u: UserInfo[F]) = users.update(_ :+ u)
+
   private[this] def nextId(): F[Long] = idCounterState.modify(curr => (curr + 1, curr))
 }
 

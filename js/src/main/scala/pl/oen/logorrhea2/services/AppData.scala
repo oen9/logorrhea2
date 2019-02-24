@@ -4,7 +4,7 @@ import cats.data.Writer
 import diode.Action
 import monocle.macros.Lenses
 import org.scalajs.dom.WebSocket
-import pl.oen.logorrhea2.shared.User
+import pl.oen.logorrhea2.shared.{Msg, Room, User}
 
 import scala.scalajs.js.Date
 
@@ -14,8 +14,12 @@ object AppData {
   case class SendMsg(msg: String) extends Action
   case class ChangeMyName(name: String) extends Action
   case class CreateNewRoom(name: String) extends Action
+
   case class UpdateRooms(names: Vector[String]) extends Action
   case class AddNewRoom(name: String) extends Action
+  case class EnteredRoom(room: Room) extends Action
+  case class SomeoneEntered(user: User) extends Action
+  case class SomeoneExitted(user: User) extends Action
 
   case object Connect extends Action
   case class Connected(user: User) extends Action
@@ -24,15 +28,15 @@ object AppData {
   sealed trait LogMsgStatus
   case object LogOk extends LogMsgStatus
   case object LogError extends LogMsgStatus
+
   case class LogMsg(msg: String, status: LogMsgStatus)
-  case class ChatMsg(user: User, msg: String)
-  case class RoomData(roomName: String, users: Vector[User] = Vector.empty, msgs: Vector[ChatMsg] = Vector.empty)
+  @Lenses case class RoomData(roomName: String, users: Vector[User] = Vector.empty, msgs: Vector[Msg] = Vector.empty)
   @Lenses case class Root(ws: WebSocket,
                           me: Option[User] = None,
                           logs: List[LogMsg] = List(logMsgOk("Connecting..."), logMsgOk("Application started")),
+                          roomName: Option[String] = None,
                           roomData: Option[RoomData] = None,
-                          rooms: Vector[String] = Vector.empty,
-                          savedRooms: Vector[RoomData] = Vector.empty)
+                          rooms: Vector[String] = Vector.empty)
   case class RootModel(root: Root)
 
   type Logged[A] = Writer[List[LogMsg], A]

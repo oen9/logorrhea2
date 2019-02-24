@@ -12,8 +12,8 @@ lazy val sharedSettings = Seq(
   libraryDependencies ++= Seq(
     "com.lihaoyi" %%% "scalatags" % "0.6.7",
     "org.typelevel" %%% "cats-core" % "1.5.0",
-    "com.github.julien-truffaut" %% "monocle-core" % monocleVersion,
-    "com.github.julien-truffaut" %% "monocle-macro" % monocleVersion,
+    "com.github.julien-truffaut" %%% "monocle-core" % monocleVersion,
+    "com.github.julien-truffaut" %%% "monocle-macro" % monocleVersion,
     "io.circe" %%% "circe-core" % circeVersion,
     "io.circe" %%% "circe-generic" % circeVersion,
     "io.circe" %%% "circe-parser" % circeVersion

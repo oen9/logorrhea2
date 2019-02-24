@@ -38,6 +38,7 @@ class ChatEndpoints[F[_] : ConcurrentEffect : Timer](userService: UserService[F]
         val e = q.enqueue
 
         val onClose = for {
+          _ <- messageHandler.handle(ui.u.id, AbandonRoom)
           _ <- userService.removeUser(ui.u.id)
           users <- userService.getUsers
           _ <- Effect[F].delay(users.map(_.u).foreach(println))

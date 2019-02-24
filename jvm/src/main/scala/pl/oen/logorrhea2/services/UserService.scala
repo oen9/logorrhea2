@@ -12,12 +12,15 @@ trait UserService[F[_]] {
   def getUsers: F[Vector[UserInfo[F]]]
   def getUser(id: Long): F[Option[UserInfo[F]]]
   def changeName(id: Long, newName: String): F[Unit]
+  def joinRoom(id: Long, room: Option[String]): F[Unit]
   def publish(data: Data): F[Unit]
   def publish(data: Data, receivers: Vector[UserInfo[F]]): F[Unit]
+
+  def publish(data: Data, receiver: UserInfo[F]): F[Unit] = publish(data, Vector(receiver))
 }
 
 object UserService {
   def apply[F[_] : ConcurrentEffect](): F[UserService[F]] = UserServiceImpl()
 
-  @Lenses case class UserInfo[F[_]](u: User, topic: Topic[F, Data])
+  @Lenses case class UserInfo[F[_]](u: User, topic: Topic[F, Data], room: Option[String] = None)
 }

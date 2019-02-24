@@ -1,12 +1,14 @@
 package pl.oen.logorrhea2.services
 
-import cats.implicits._
 import cats.effect.Effect
 import cats.effect.concurrent.Ref
+import cats.implicits._
 import pl.oen.logorrhea2.services.RoomService.RoomInfo
-import pl.oen.logorrhea2.shared.Room
+import pl.oen.logorrhea2.services.UserService.UserInfo
+import pl.oen.logorrhea2.shared.{JoinRoom, Room}
 
 class RoomServiceImpl[F[_] : Effect](rooms: Ref[F, Vector[RoomInfo[F]]]) extends RoomService[F] {
+
   override def createRoom(name: String): F[Option[RoomInfo[F]]] = for {
     result <- rooms.modify(ri => addRoom(ri, name))
   } yield result
@@ -15,6 +17,25 @@ class RoomServiceImpl[F[_] : Effect](rooms: Ref[F, Vector[RoomInfo[F]]]) extends
     rms <- rooms.get
     roomsNames = rms.map(roomToData)
   } yield roomsNames
+
+  override def joinRoom(u: UserInfo[F], jr: JoinRoom): F[Option[RoomInfo[F]]] =
+    rooms.modify(rs => addUserToRoom(u, jr, rs))
+
+  override def abandonRoom(u: UserInfo[F]): F[Option[RoomInfo[F]]] = {
+    def modify(rv: Vector[RoomInfo[F]], roomName: String): (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
+      val updatedRv = rv.map { r =>
+        if (r.name != roomName) r
+        else {
+          val updatedUsers = r.users.filter(_.u.id != u.u.id)
+          r.copy(users = updatedUsers)
+        }
+      }
+
+      (updatedRv, updatedRv.find(_.name == roomName))
+    }
+
+    u.room.fold(Effect[F].pure(none[RoomInfo[F]]))(roomName => rooms.modify(modify(_, roomName)))
+  }
 
   private[this] def addRoom(ris: Vector[RoomInfo[F]], name: String): (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
     def newRoom: (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
@@ -25,6 +46,19 @@ class RoomServiceImpl[F[_] : Effect](rooms: Ref[F, Vector[RoomInfo[F]]]) extends
     ris.find(_.name == name)
       .fold(newRoom)(_ => (ris, None))
   }
+
+  private[this] def addUserToRoom(u: UserInfo[F], jr: JoinRoom, rs: Vector[RoomInfo[F]]): (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
+    val updatedRoom = for {
+      room <- rs.find(_.name == jr.name)
+      users <- if (room.users.forall(_.u.id != u.u.id)) Some(room.users :+ u) else None
+    } yield room.copy(users = users)
+
+    updatedRoom.fold((rs, none[RoomInfo[F]])) { updatedR =>
+      val roomIndex = rs.indexWhere(_.name == updatedR.name)
+      (rs.updated(roomIndex, updatedR), Some(updatedR))
+    }
+  }
+
 }
 
 object RoomServiceImpl {
