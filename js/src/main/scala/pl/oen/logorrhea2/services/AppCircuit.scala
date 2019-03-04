@@ -23,11 +23,10 @@ class ClicksHandler[M](modelRW: ModelRW[M, Root]) extends ActionHandler(modelRW)
       val msg = JoinRoom(roomName)
       updated(setRoomName(value), Websock.sendAsEffect(value.ws, msg))
 
-    case SendMsg(msg) =>
+    case SendMsg(message) =>
       (value.me, value.roomData).bisequence.fold(ActionResult.NoChange: ActionResult[M]) { case (me, roomData) =>
-        val newRoomData = roomData.copy(msgs = roomData.msgs :+ Msg(me, msg))
-        val setRoomData = Root.roomData.set(Some(newRoomData))
-        updated(setRoomData(value))
+        val cmd = RegisterMessage(Msg(me, message), roomData.roomName)
+        effectOnly(Websock.sendAsEffect(value.ws, cmd))
       }
 
     case ChangeMyName(newName) =>
@@ -67,6 +66,10 @@ class WebsockReceiverHandler[M](modelRW: ModelRW[M, Root]) extends ActionHandler
       val removeUser = (Root.roomData composePrism some composeLens RoomData.users)
         .modify(_.filter(_.id != u.id))
       updated(removeUser(value))
+
+    case SomeoneSentMsg(msg) =>
+      val addMsg = (Root.roomData composePrism some composeLens RoomData.msgs).modify(_ :+ msg)
+      updated(addMsg(value))
   }
 }
 

@@ -5,7 +5,7 @@ import cats.effect.concurrent.Ref
 import cats.implicits._
 import pl.oen.logorrhea2.services.RoomService.RoomInfo
 import pl.oen.logorrhea2.services.UserService.UserInfo
-import pl.oen.logorrhea2.shared.{JoinRoom, Room}
+import pl.oen.logorrhea2.shared.{JoinRoom, Msg, Room}
 
 class RoomServiceImpl[F[_] : Effect](rooms: Ref[F, Vector[RoomInfo[F]]]) extends RoomService[F] {
 
@@ -37,6 +37,8 @@ class RoomServiceImpl[F[_] : Effect](rooms: Ref[F, Vector[RoomInfo[F]]]) extends
     u.room.fold(Effect[F].pure(none[RoomInfo[F]]))(roomName => rooms.modify(modify(_, roomName)))
   }
 
+  override def registerMessage(msg: Msg, roomName: String): F[Option[RoomInfo[F]]] = rooms.modify(addMessage(msg, roomName, _))
+
   private[this] def addRoom(ris: Vector[RoomInfo[F]], name: String): (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
     def newRoom: (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
       val created = RoomInfo[F](name)
@@ -59,6 +61,14 @@ class RoomServiceImpl[F[_] : Effect](rooms: Ref[F, Vector[RoomInfo[F]]]) extends
     }
   }
 
+  private[this] def addMessage(m: Msg, roomName: String, rs: Vector[RoomInfo[F]]): (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
+    rs.find(_.name == roomName)
+      .map(room => room.copy(msgs = room.msgs :+ m))
+      .fold((rs, none[RoomInfo[F]])) { updatedRoom =>
+        val roomIndex = rs.indexWhere(_.name == updatedRoom.name)
+        (rs.updated(roomIndex, updatedRoom), Some(updatedRoom))
+      }
+  }
 }
 
 object RoomServiceImpl {

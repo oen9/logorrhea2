@@ -20,6 +20,7 @@ object AppData {
   case class EnteredRoom(room: Room) extends Action
   case class SomeoneEntered(user: User) extends Action
   case class SomeoneExitted(user: User) extends Action
+  case class SomeoneSentMsg(msg: Msg) extends Action
 
   case object Connect extends Action
   case class Connected(user: User) extends Action

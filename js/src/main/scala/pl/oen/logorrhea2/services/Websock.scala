@@ -28,6 +28,7 @@ object Websock {
         case JoinedRoom(room) => AppCircuit.dispatch(EnteredRoom(room))
         case SomeoneJoinedRoom(u) => AppCircuit.dispatch(SomeoneEntered(u))
         case SomeoneAbandonedRoom(u) => AppCircuit.dispatch(SomeoneExitted(u))
+        case MessageRegistered(msg) => AppCircuit.dispatch(SomeoneSentMsg(msg))
         case unknown => println(s"[ws] unsupported data: $unknown")
       })
     }
