@@ -80,7 +80,8 @@ lazy val jvmSettings = Seq(
     "ch.qos.logback" % "logback-classic" % LogbackVersion,
     "io.circe" %% "circe-generic" % "0.10.0",
     "io.circe" %% "circe-literal" % "0.10.0",
-    "com.github.pureconfig" %% "pureconfig" % "0.9.2"
+    "com.github.pureconfig" %% "pureconfig" % "0.9.2",
+    "org.reactivemongo" %% "reactivemongo" % "0.16.3"
   ),
   target := baseDirectory.value / ".." / "target"
 )

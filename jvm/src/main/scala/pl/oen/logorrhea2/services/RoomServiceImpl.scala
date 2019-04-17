@@ -7,10 +7,12 @@ import pl.oen.logorrhea2.services.RoomService.RoomInfo
 import pl.oen.logorrhea2.services.UserService.UserInfo
 import pl.oen.logorrhea2.shared.{JoinRoom, Msg, Room}
 
-class RoomServiceImpl[F[_] : Effect](rooms: Ref[F, Vector[RoomInfo[F]]]) extends RoomService[F] {
+class RoomServiceImpl[F[_] : Effect](rooms: Ref[F, Vector[RoomInfo[F]]],
+                                     mongoService: MongoService[F]) extends RoomService[F] {
 
   override def createRoom(name: String): F[Option[RoomInfo[F]]] = for {
     result <- rooms.modify(ri => addRoom(ri, name))
+    _ <- result.fold(Effect[F].unit)(mongoService.createRoom)
   } yield result
 
   override def getRooms(): F[Vector[Room]] = for {
@@ -37,7 +39,10 @@ class RoomServiceImpl[F[_] : Effect](rooms: Ref[F, Vector[RoomInfo[F]]]) extends
     u.room.fold(Effect[F].pure(none[RoomInfo[F]]))(roomName => rooms.modify(modify(_, roomName)))
   }
 
-  override def registerMessage(msg: Msg, roomName: String): F[Option[RoomInfo[F]]] = rooms.modify(addMessage(msg, roomName, _))
+  override def registerMessage(msg: Msg, roomName: String): F[Option[RoomInfo[F]]] = for {
+    room <- rooms.modify(addMessage(msg, roomName, _))
+    _ <- room.fold(Effect[F].unit)(r => mongoService.addMsg(r.name, msg))
+  } yield room
 
   private[this] def addRoom(ris: Vector[RoomInfo[F]], name: String): (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
     def newRoom: (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
@@ -72,12 +77,9 @@ class RoomServiceImpl[F[_] : Effect](rooms: Ref[F, Vector[RoomInfo[F]]]) extends
 }
 
 object RoomServiceImpl {
-  def initRooms[F[_]]: Vector[RoomInfo[F]] = Vector(RoomInfo[F]("general"), RoomInfo[F]("funny"), RoomInfo[F]("serious"))
-
-  def apply[F[_] : Effect](): F[RoomService[F]] = for {
+  def apply[F[_] : Effect](mongoService: MongoService[F]): F[RoomService[F]] = for {
+    initRooms <- mongoService.getRooms()
     rooms <- Ref.of[F, Vector[RoomInfo[F]]](initRooms)
-    roomService = new RoomServiceImpl[F](rooms)
+    roomService = new RoomServiceImpl[F](rooms, mongoService)
   } yield roomService
 }
-
-

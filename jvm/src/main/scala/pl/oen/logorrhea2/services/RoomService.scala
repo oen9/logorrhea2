@@ -21,7 +21,7 @@ object RoomService {
   val serverUser = User(0, "SERVER")
   val initMsgs: Vector[Msg] = Vector(Msg(serverUser, "Welcome!"))
 
-  def apply[F[_] : Effect](): F[RoomService[F]] = RoomServiceImpl()
+  def apply[F[_] : Effect](mongoService: MongoService[F]): F[RoomService[F]] = RoomServiceImpl(mongoService)
 
   case class RoomInfo[F[_]](name: String,
                             users: Vector[UserInfo[F]] = Vector.empty,

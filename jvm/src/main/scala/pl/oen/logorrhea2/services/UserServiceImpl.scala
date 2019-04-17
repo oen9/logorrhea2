@@ -8,7 +8,8 @@ import pl.oen.logorrhea2.services.UserService.UserInfo
 import pl.oen.logorrhea2.shared.{Data, LogStr, User}
 
 class UserServiceImpl[F[_] : ConcurrentEffect](idCounterState: Ref[F, Long],
-                                               users: Ref[F, Vector[UserInfo[F]]])
+                                               users: Ref[F, Vector[UserInfo[F]]],
+                                               mongoService: MongoService[F])
   extends UserService[F] {
 
   override def genNewUser(): F[UserInfo[F]] = for {
@@ -47,15 +48,19 @@ class UserServiceImpl[F[_] : ConcurrentEffect](idCounterState: Ref[F, Long],
 
   private[this] def addUserToList(u: UserInfo[F]) = users.update(_ :+ u)
 
-  private[this] def nextId(): F[Long] = idCounterState.modify(curr => (curr + 1, curr))
+  private[this] def nextId(): F[Long] = for {
+    newId <- idCounterState.modify(curr => (curr + 1, curr))
+    _ <- mongoService.incrementUserCounter()
+  } yield newId
 }
 
 
 object UserServiceImpl {
-  def apply[F[_] : ConcurrentEffect](): F[UserService[F]] = for {
-    idCounterState <- Ref.of[F, Long](1)
+  def apply[F[_] : ConcurrentEffect](mongoService: MongoService[F]): F[UserService[F]] = for {
+    configState <- mongoService.getCfg()
+    idCounterState <- Ref.of[F, Long](configState.userCounter)
     users <- Ref.of[F, Vector[UserInfo[F]]](Vector.empty)
-    userIdProvider = new UserServiceImpl[F](idCounterState, users)
+    userIdProvider = new UserServiceImpl[F](idCounterState, users, mongoService)
   } yield userIdProvider
 
 }

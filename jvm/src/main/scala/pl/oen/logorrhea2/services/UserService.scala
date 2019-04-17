@@ -20,7 +20,7 @@ trait UserService[F[_]] {
 }
 
 object UserService {
-  def apply[F[_] : ConcurrentEffect](): F[UserService[F]] = UserServiceImpl()
+  def apply[F[_] : ConcurrentEffect](mongoService: MongoService[F]): F[UserService[F]] = UserServiceImpl(mongoService)
 
   @Lenses case class UserInfo[F[_]](u: User, topic: Topic[F, Data], room: Option[String] = None)
 }

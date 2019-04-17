@@ -4,9 +4,9 @@ import cats.effect.{ContextShift, Effect}
 import org.http4s.dsl.Http4sDsl
 import org.http4s.{HttpRoutes, Request, StaticFile}
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService}
+import scala.concurrent.ExecutionContext
 
-class StaticEndpoints[F[_] : ContextShift : Effect](blockingEc: ExecutionContextExecutorService) extends Http4sDsl[F] {
+class StaticEndpoints[F[_] : ContextShift : Effect](blockingEc: ExecutionContext) extends Http4sDsl[F] {
 
   private[this] def static(file: String, blockingEc: ExecutionContext, request: Request[F]) =
     StaticFile.fromResource("/" + file, blockingEc, Some(request)).getOrElseF(NotFound())
@@ -23,6 +23,6 @@ class StaticEndpoints[F[_] : ContextShift : Effect](blockingEc: ExecutionContext
 }
 
 object StaticEndpoints {
-  def apply[F[_] : ContextShift : Effect](blockingEc: ExecutionContextExecutorService): StaticEndpoints[F] =
+  def apply[F[_] : ContextShift : Effect](blockingEc: ExecutionContext): StaticEndpoints[F] =
     new StaticEndpoints[F](blockingEc)
 }
