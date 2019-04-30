@@ -43,6 +43,12 @@ class MongoServiceImpl[F[_] : Effect](dbConfig: BSONCollection, dbRooms: BSONCol
     _ <- dbRooms.insert.one(RoomState(roomInfo.name, roomInfo.msgs)).toF
   } yield ()
 
+  override def changeRoomName(newRoomName: String, oldRoomName: String): F[Unit] = for {
+    _ <- Effect[F].unit
+    upd = BSONDocument("$set" -> BSONDocument("name" -> newRoomName))
+    _ <- dbRooms.update.one(BSONDocument("name" -> oldRoomName), upd).toF
+  } yield ()
+
   override def addMsg(roomName: String, msg: Msg): F[Unit] = for {
     _ <- Effect[F].unit
     upd = BSONDocument("$push" -> BSONDocument("msgs" -> msg))

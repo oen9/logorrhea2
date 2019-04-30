@@ -11,6 +11,7 @@ trait RoomService[F[_]] {
   def joinRoom(u: UserInfo[F], jr: JoinRoom): F[Option[RoomInfo[F]]]
   def abandonRoom(u: UserInfo[F]): F[Option[RoomInfo[F]]]
   def registerMessage(msg: Msg, roomName: String): F[Option[RoomInfo[F]]]
+  def changeRoomName(newRoomName: String, oldRoomName: String): F[Option[RoomInfo[F]]]
 
   protected[this] def roomToData(ri: RoomInfo[F]): Room = {
     Room(ri.name, ri.users.map(_.u), ri.msgs)

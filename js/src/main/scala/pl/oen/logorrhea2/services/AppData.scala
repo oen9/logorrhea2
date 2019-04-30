@@ -14,6 +14,7 @@ object AppData {
   case class SendMsg(msg: String) extends Action
   case class ChangeMyName(name: String) extends Action
   case class CreateNewRoom(name: String) extends Action
+  case class ChangeCurrentRoomName(newRoomName: String) extends Action
 
   case class UpdateRooms(names: Vector[String]) extends Action
   case class AddNewRoom(name: String) extends Action
@@ -21,6 +22,7 @@ object AppData {
   case class SomeoneEntered(user: User) extends Action
   case class SomeoneExitted(user: User) extends Action
   case class SomeoneSentMsg(msg: Msg) extends Action
+  case class SomeoneChangedRoomName(newRoomName: String, oldRoomName: String) extends Action
 
   case object Connect extends Action
   case class Connected(user: User) extends Action

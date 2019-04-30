@@ -175,6 +175,11 @@ a {
         .email-content-title {
             margin: 0.5em 0 0;
         }
+
+        .room-content-title input {
+          padding: 0 !important;
+        }
+
         .email-content-subtitle {
             font-size: 1em;
             margin: 0;

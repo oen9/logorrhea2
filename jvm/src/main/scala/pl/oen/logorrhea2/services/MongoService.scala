@@ -16,6 +16,7 @@ trait MongoService[F[_]] {
   def incrementUserCounter(): F[Unit]
   def getRooms(): F[Vector[RoomInfo[F]]]
   def createRoom(roomInfo: RoomInfo[F]): F[Unit]
+  def changeRoomName(newRoomName: String, oldRoomName: String): F[Unit]
   def addMsg(roomName: String, msg: Msg): F[Unit]
 }
 

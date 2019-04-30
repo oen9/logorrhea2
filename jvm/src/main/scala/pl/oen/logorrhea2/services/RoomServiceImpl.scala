@@ -44,6 +44,11 @@ class RoomServiceImpl[F[_] : Effect](rooms: Ref[F, Vector[RoomInfo[F]]],
     _ <- room.fold(Effect[F].unit)(r => mongoService.addMsg(r.name, msg))
   } yield room
 
+  override def changeRoomName(newRoomName: String, oldRoomName: String): F[Option[RoomInfo[F]]] = for {
+    room <- rooms.modify(changeName(newRoomName, oldRoomName, _))
+    _ <- room.fold(Effect[F].unit)(_ => mongoService.changeRoomName(newRoomName, oldRoomName))
+  } yield room
+
   private[this] def addRoom(ris: Vector[RoomInfo[F]], name: String): (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
     def newRoom: (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
       val created = RoomInfo[F](name)
@@ -66,14 +71,23 @@ class RoomServiceImpl[F[_] : Effect](rooms: Ref[F, Vector[RoomInfo[F]]],
     }
   }
 
-  private[this] def addMessage(m: Msg, roomName: String, rs: Vector[RoomInfo[F]]): (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
+  private[this] def addMessage(m: Msg, roomName: String, rs: Vector[RoomInfo[F]]): (Vector[RoomInfo[F]], Option[RoomInfo[F]]) =
+    modifyRoomByName(roomName, rs) { room =>
+      room.copy(msgs = room.msgs :+ m)
+    }
+
+  private[this] def changeName(newRoomName: String, oldRoomName: String, rs: Vector[RoomInfo[F]]): (Vector[RoomInfo[F]], Option[RoomInfo[F]]) =
+    modifyRoomByName(oldRoomName, rs) { room =>
+      room.copy(name = newRoomName, users = Vector())
+    }
+
+  private[this] def modifyRoomByName(roomName: String, rs: Vector[RoomInfo[F]])(op: RoomInfo[F] => RoomInfo[F]): (Vector[RoomInfo[F]], Option[RoomInfo[F]]) =
     rs.find(_.name == roomName)
-      .map(room => room.copy(msgs = room.msgs :+ m))
+      .map(op)
       .fold((rs, none[RoomInfo[F]])) { updatedRoom =>
-        val roomIndex = rs.indexWhere(_.name == updatedRoom.name)
+        val roomIndex = rs.indexWhere(_.name == roomName)
         (rs.updated(roomIndex, updatedRoom), Some(updatedRoom))
       }
-  }
 }
 
 object RoomServiceImpl {

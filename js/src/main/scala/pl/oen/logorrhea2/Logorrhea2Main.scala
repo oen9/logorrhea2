@@ -38,7 +38,7 @@ object Logorrhea2Main {
         | staticRoute("#newroom", NewRoomLoc) ~> render(meWrapper(NewRoom(_)))
         | staticRoute("#about", AboutLoc) ~> render(About())
         | staticRoute("#fulllogs", FullLogsLoc) ~> render(logsWrapper(FullLogs(_)))
-        | dynamicRouteCT("#room" / remainingPath.caseClass[RoomLoc]) ~> dynRender(roomName => rootWrapper(Room(roomName.name)))
+        | dynamicRouteCT("#room" / remainingPath.caseClass[RoomLoc]) ~> dynRenderR((roomName, router) => rootWrapper(Room(roomName.name, router)))
         )
         .notFound(redirectToPage(AboutLoc)(Redirect.Replace))
         .setTitle(loc => s"logorrhea2 - ${loc.name}")

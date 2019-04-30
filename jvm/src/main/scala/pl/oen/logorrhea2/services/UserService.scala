@@ -13,6 +13,7 @@ trait UserService[F[_]] {
   def getUser(id: Long): F[Option[UserInfo[F]]]
   def changeName(id: Long, newName: String): F[Unit]
   def joinRoom(id: Long, room: Option[String]): F[Unit]
+  def changeRoomName(newRoomName: String, oldRoomName: String): F[Unit]
   def publish(data: Data): F[Unit]
   def publish(data: Data, receivers: Vector[UserInfo[F]]): F[Unit]
 

@@ -5,6 +5,8 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
 import cats.implicits._
+import japgolly.scalajs.react.extra.router.RouterCtl
+import pl.oen.logorrhea2.Logorrhea2Main.{Loc, RoomLoc}
 import pl.oen.logorrhea2.services.AppData._
 import pl.oen.logorrhea2.shared.User
 
@@ -12,9 +14,9 @@ import scala.scalajs.js.URIUtils
 
 object Room {
 
-  case class Props(roomName: String, proxy: ModelProxy[Root])
+  case class Props(roomName: String, proxy: ModelProxy[Root], router: RouterCtl[Loc])
 
-  case class State(roomName: String, newMsg: String)
+  case class State(roomName: String, newMsg: String, newRoomName: Option[String] = None)
 
   class Backend($: BackendScope[Props, State]) {
     def send(e: ReactEvent): Callback = {
@@ -26,6 +28,22 @@ object Room {
         msg = if (s.newMsg.nonEmpty) Some(s.newMsg) else None
         _ <- msg.fold(Callback.empty)(m => p.proxy.dispatchCB(SendMsg(m)))
         _ <- $.modState(_.copy(newMsg = ""))
+      } yield ()
+    }
+
+    def changeRoomName(e: ReactEvent): Callback = {
+      e.preventDefault()
+
+      for {
+        s <- $.state
+        p <- $.props
+        decodedRoomName = URIUtils.decodeURI(s.roomName)
+        _ <- s.newRoomName.fold(
+          $.modState(_.copy(newRoomName = decodedRoomName.some))
+        )(newRoomName => {
+          val encodedNewRoomName = URIUtils.encodeURI(newRoomName)
+          $.modState(_.copy(newRoomName = None)) >> p.proxy.dispatchCB(ChangeCurrentRoomName(encodedNewRoomName))
+        })
       } yield ()
     }
 
@@ -47,6 +65,10 @@ object Room {
       s <- $.state
       p <- $.props
       _ <- if (s.roomName == p.roomName) Callback.empty else enterRoom()
+      _ <- p.proxy.value.roomName.fold(Callback.empty)(realRoomName =>
+        if (realRoomName != s.roomName) p.router.set(RoomLoc(realRoomName))
+        else Callback.empty
+      )
       _ <- scrollChat()
     } yield ()
 
@@ -56,6 +78,11 @@ object Room {
     def scrollChat(): Callback = chatDivRef.foreach(chatD => {
       chatD.scrollTop = chatD.scrollHeight
     })
+
+    def updateNewRoomName(e: ReactEventFromInput): Callback = {
+      val newValue = e.target.value
+      $.modState(_.copy(newRoomName = Some(newValue)))
+    }
 
     def updateNewMsg(e: ReactEventFromInput): Callback = {
       val newValue = e.target.value
@@ -77,17 +104,23 @@ object Room {
     }
 
     def render(props: Props, state: State) = {
-      val decodedRoomname = URIUtils.decodeURI(props.roomName)
+      val decodedRoomName = URIUtils.decodeURI(props.roomName)
 
       <.div(^.cls := "email-content-scrolled",
         <.div(^.cls := "email-content-header pure-g",
-          <.div(^.cls := "pure-u-1-2",
-            <.h1(^.cls := "email-content-title", decodedRoomname),
-          ),
+          <.form(^.cls := "pure-form", ^.width := "100%",
+            <.div(^.cls := "pure-u-1-2",
+              <.h1(^.cls := "room-content-title",
+                state.newRoomName.fold(<.span(decodedRoomName))(newRoomName =>
+                  <.span(<.input.text(^.cls := "pure-input", ^.width := "100%", ^.value := newRoomName, ^.onChange ==> updateNewRoomName))
+                )
+              )
+            ),
 
-          <.div(^.cls := "email-content-controls pure-u-1-2",
-            <.button(^.cls := "secondary-button pure-button", "change room name"),
-            <.button(^.cls := "secondary-button pure-button", "remove room")
+            <.div(^.cls := "email-content-controls pure-u-1-2",
+              <.button(^.cls := "secondary-button pure-button", "change room name", ^.onClick ==> changeRoomName),
+              <.button(^.cls := "secondary-button pure-button", "remove room")
+            )
           )
         ),
 
@@ -124,5 +157,5 @@ object Room {
     .componentDidUpdate(_.backend.onUpdate())
     .build
 
-  def apply(roomName: String)(proxy: ModelProxy[Root]) = component(Props(roomName, proxy))
+  def apply(roomName: String, router: RouterCtl[Loc])(proxy: ModelProxy[Root]) = component(Props(roomName, proxy, router))
 }

@@ -46,6 +46,14 @@ class MessageHandlerImpl[F[_] : Effect](userService: UserService[F],
       result <- published.fold(Effect[F].pure(Error("room not found") : Result))(_ *> Effect[F].pure(Success(d)))
     } yield result
 
+    case ChangeRoomName(newRoomName, oldRoomName) => for {
+      room <- roomService.changeRoomName(newRoomName, oldRoomName)
+      _ <- userService.changeRoomName(newRoomName, oldRoomName)
+      roomNameChanged = RoomNameChanged(newRoomName, oldRoomName)
+      published = room.map(r => userService.publish(roomNameChanged))
+      result <- published.fold(Effect[F].pure(Error("room not found") : Result))(_ *> Effect[F].pure(Success(d)))
+    } yield result
+
     case unknown => Effect[F].pure(Error(s"unknown message $unknown"))
   }
 

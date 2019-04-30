@@ -33,6 +33,12 @@ class UserServiceImpl[F[_] : ConcurrentEffect](idCounterState: Ref[F, Long],
     if (id == ui.u.id) setUserName(ui) else ui
   })
 
+  override def changeRoomName(newRoomName: String, oldRoomName: String): F[Unit] = for {
+    _ <- users.update(_.map { u =>
+      u.room.fold(u)(currName => if (currName == oldRoomName) u.copy(room = None) else u)
+    })
+  } yield ()
+
   override def joinRoom(id: Long, room: Option[String]): F[Unit] = users.update(_.map(ui =>
     if (ui.u.id == id) ui.copy(room = room)
     else ui
@@ -62,5 +68,4 @@ object UserServiceImpl {
     users <- Ref.of[F, Vector[UserInfo[F]]](Vector.empty)
     userIdProvider = new UserServiceImpl[F](idCounterState, users, mongoService)
   } yield userIdProvider
-
 }
