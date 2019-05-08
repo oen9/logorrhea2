@@ -24,23 +24,28 @@ object App extends IOApp {
 
   def createServer[F[_] : ContextShift : ConcurrentEffect : Timer](blockingEc: ExecutionContext,
                                                                    dbEc: ExecutionContext): F[ExitCode] = {
-    for {
-      conf <- AppConfig.read()
-      staticEndpoints = StaticEndpoints[F](blockingEc)
+    val closableServices = for {
+      conf <- Resource.liftF(AppConfig.read())
       mongoService <- MongoService[F](conf.mongo.uri)(Effect[F], dbEc)
-      userService <- UserService[F](mongoService)
-      roomService <- RoomService[F](mongoService)
-      messageHandler = MessageHandler(userService, roomService)
-      chatEndpoints = ChatEndpoints[F](userService, roomService, messageHandler)
-      httpApp = (staticEndpoints.endpoints() <+> chatEndpoints.endpoints()).orNotFound
-      exitCode <- BlazeServerBuilder[F]
-        .bindHttp(conf.http.port, conf.http.host)
-        .withHttpApp(httpApp)
-        .serve
-        .compile
-        .drain
-        .as(ExitCode.Success)
-    } yield exitCode
+    } yield (conf, mongoService)
+
+    closableServices.use { case (conf, mongoService) =>
+      for {
+        userService <- UserService[F](mongoService)
+        roomService <- RoomService[F](mongoService)
+        messageHandler = MessageHandler(userService, roomService)
+        chatEndpoints = ChatEndpoints[F](userService, roomService, messageHandler)
+        staticEndpoints = StaticEndpoints[F](blockingEc)
+        httpApp = (staticEndpoints.endpoints() <+> chatEndpoints.endpoints()).orNotFound
+        exitCode <- BlazeServerBuilder[F]
+          .bindHttp(conf.http.port, conf.http.host)
+          .withHttpApp(httpApp)
+          .serve
+          .compile
+          .drain
+          .as(ExitCode.Success)
+      } yield exitCode
+    }
   }
 
   def createEc[F[_] : Effect](nThreads: Int): Resource[F, ExecutionContext] = Resource[F, ExecutionContext](Effect[F].delay {

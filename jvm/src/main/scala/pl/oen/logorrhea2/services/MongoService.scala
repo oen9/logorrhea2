@@ -1,6 +1,6 @@
 package pl.oen.logorrhea2.services
 
-import cats.effect.Effect
+import cats.effect.{Effect, Resource}
 import cats.implicits._
 import pl.oen.logorrhea2.dbdata.StorageData
 import pl.oen.logorrhea2.dbdata.StorageData.ConfigState
@@ -23,11 +23,10 @@ trait MongoService[F[_]] {
 }
 
 object MongoService {
-  def apply[F[_] : Effect](mongoUri: String)(implicit dbEc: ExecutionContext): F[MongoService[F]] = {
+  def apply[F[_] : Effect](mongoUri: String)(implicit dbEc: ExecutionContext): Resource[F, MongoService[F]] = {
     import pl.oen.logorrhea2.tclass.LiftAny._
 
-    def connectToDb(): F[DefaultDB] = {
-      val driver = MongoDriver()
+    def connectToDb(driver: MongoDriver): F[DefaultDB] = {
       val parsedUri = MongoConnection.parseURI(mongoUri)
       val connection = parsedUri.map(driver.connection)
       val dbName = parsedUri.map(_.db.getOrElse("logrrhea2"))
@@ -39,12 +38,17 @@ object MongoService {
       } yield db
     }
 
+    def createMongoService(db: DefaultDB) = {
+      val dbConfig = db.collection(StorageData.CONFIGS_COLLECTION_NAME): BSONCollection
+      val dbRooms = db.collection(StorageData.ROOMS_COLLECTION_NAME): BSONCollection
+      val dbRoomsRemoved = db.collection(StorageData.ROOMS_REMOVED_COLLECTION_NAME): BSONCollection
+      MongoServiceImpl[F](dbConfig, dbRooms, dbRoomsRemoved, dbEc)
+    }
+
     for {
-      db <- connectToDb()
-      dbConfig = db.collection(StorageData.CONFIGS_COLLECTION_NAME): BSONCollection
-      dbRooms = db.collection(StorageData.ROOMS_COLLECTION_NAME): BSONCollection
-      dbRoomsRemoved = db.collection(StorageData.ROOMS_REMOVED_COLLECTION_NAME): BSONCollection
-      mongoService = MongoServiceImpl[F](dbConfig, dbRooms, dbRoomsRemoved, dbEc)
+      driver <- Resource.make(Effect[F].delay(MongoDriver()))(driver => Effect[F].delay(driver.close()))
+      db <- Resource.liftF(connectToDb(driver))
+      mongoService = createMongoService(db)
     } yield mongoService
   }
 }
