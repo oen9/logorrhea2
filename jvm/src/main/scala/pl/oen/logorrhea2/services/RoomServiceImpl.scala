@@ -11,7 +11,9 @@ class RoomServiceImpl[F[_] : Effect](rooms: Ref[F, Vector[RoomInfo[F]]],
                                      mongoService: MongoService[F]) extends RoomService[F] {
 
   override def createRoom(name: String): F[Option[RoomInfo[F]]] = for {
-    result <- rooms.modify(ri => addRoom(ri, name))
+    revivedRoom <- mongoService.reviveRoom(name)
+    newOrRevived = revivedRoom.fold(RoomInfo[F](name))(identity)
+    result <- rooms.modify(ri => addRoom(ri, newOrRevived))
     _ <- result.fold(Effect[F].unit)(mongoService.createRoom)
   } yield result
 
@@ -49,14 +51,24 @@ class RoomServiceImpl[F[_] : Effect](rooms: Ref[F, Vector[RoomInfo[F]]],
     _ <- room.fold(Effect[F].unit)(_ => mongoService.changeRoomName(newRoomName, oldRoomName))
   } yield room
 
-  private[this] def addRoom(ris: Vector[RoomInfo[F]], name: String): (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
+  override def removeRoom(roomName: String): F[Option[RoomInfo[F]]] = for {
+    roomToRemove <- rooms.modify(removeRoom(_, roomName))
+    _ <- roomToRemove.fold(Effect[F].unit)(mongoService.removeRoom)
+  } yield roomToRemove
+
+  private[this] def addRoom(ris: Vector[RoomInfo[F]], roomToAdd: RoomInfo[F]): (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
     def newRoom: (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
-      val created = RoomInfo[F](name)
-      (ris :+ created, Some(created))
+      (ris :+ roomToAdd, Some(roomToAdd))
     }
 
-    ris.find(_.name == name)
+    ris.find(_.name == roomToAdd.name)
       .fold(newRoom)(_ => (ris, None))
+  }
+
+  private[this] def removeRoom(ris: Vector[RoomInfo[F]], name: String): (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {
+    val roomToRemove = ris.find(_.name == name)
+    val modifiedRis = ris.filter(_.name != name)
+    (modifiedRis, roomToRemove)
   }
 
   private[this] def addUserToRoom(u: UserInfo[F], jr: JoinRoom, rs: Vector[RoomInfo[F]]): (Vector[RoomInfo[F]], Option[RoomInfo[F]]) = {

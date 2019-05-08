@@ -23,6 +23,7 @@ case class JoinRoom(name: String) extends Cmd
 case object AbandonRoom extends Cmd
 case class RegisterMessage(msg: Msg, roomName: String) extends Cmd
 case class ChangeRoomName(newRoomName: String, oldRoomName: String) extends Cmd
+case class RemoveRoom(roomName: String) extends Cmd
 
 sealed trait Evt extends Data
 case class RoomAdded(name: String) extends Evt
@@ -32,3 +33,4 @@ case class SomeoneAbandonedRoom(user: User) extends Evt
 case object RoomAbandoned extends Evt
 case class MessageRegistered(msg: Msg) extends Evt
 case class RoomNameChanged(newRoomName: String, oldRoomName: String) extends Evt
+case class RoomRemoved(roomName: String) extends Evt

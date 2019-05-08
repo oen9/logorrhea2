@@ -41,6 +41,11 @@ class ClicksHandler[M](modelRW: ModelRW[M, Root]) extends ActionHandler(modelRW)
       value.roomName.fold(ActionResult.NoChange: ActionResult[M])(oldRoomName =>
         effectOnly(Websock.sendAsEffect(value.ws, ChangeRoomName(newRoomName, oldRoomName)))
       )
+
+    case RemoveCurrentRoom =>
+      value.roomName.fold(ActionResult.NoChange: ActionResult[M])(roomName =>
+        effectOnly(Websock.sendAsEffect(value.ws, RemoveRoom(roomName)))
+      )
   }
 }
 
@@ -84,6 +89,14 @@ class WebsockReceiverHandler[M](modelRW: ModelRW[M, Root]) extends ActionHandler
         )
       val modifyRooms = Root.rooms.modify(_.map(room => if (room == oldRoomName) newRoomName else room))
       updated((setRoomName compose modifyRooms)(value))
+
+    case SomeoneRemovedRoom(removedRoomName) =>
+      val removeRoom = Root.rooms.modify(_.filter(_ != removedRoomName))
+      val clearRoomName = value.roomName.fold(identity: AppData.Root => AppData.Root)(name =>
+        if (name == removedRoomName) Root.roomName.set(None)
+        else identity
+      )
+      updated((removeRoom compose clearRoomName)(value))
   }
 }
 

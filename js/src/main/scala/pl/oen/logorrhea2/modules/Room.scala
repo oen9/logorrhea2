@@ -1,12 +1,12 @@
 package pl.oen.logorrhea2.modules
 
+import cats.implicits._
 import diode.react.ModelProxy
 import japgolly.scalajs.react._
+import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html
-import cats.implicits._
-import japgolly.scalajs.react.extra.router.RouterCtl
-import pl.oen.logorrhea2.Logorrhea2Main.{Loc, RoomLoc}
+import pl.oen.logorrhea2.Logorrhea2Main.{Loc, NewRoomLoc, RoomLoc}
 import pl.oen.logorrhea2.services.AppData._
 import pl.oen.logorrhea2.shared.User
 
@@ -47,6 +47,15 @@ object Room {
       } yield ()
     }
 
+    def removeRoom(e: ReactEvent): Callback = {
+      e.preventDefault()
+
+      for {
+        p <- $.props
+        _ <- p.proxy.dispatchCB(RemoveCurrentRoom)
+      } yield ()
+    }
+
     def enterRoom(): Callback = {
       for {
         p <- $.props
@@ -65,7 +74,7 @@ object Room {
       s <- $.state
       p <- $.props
       _ <- if (s.roomName == p.roomName) Callback.empty else enterRoom()
-      _ <- p.proxy.value.roomName.fold(Callback.empty)(realRoomName =>
+      _ <- p.proxy.value.roomName.fold(p.router.set(NewRoomLoc))(realRoomName =>
         if (realRoomName != s.roomName) p.router.set(RoomLoc(realRoomName))
         else Callback.empty
       )
@@ -119,7 +128,7 @@ object Room {
 
             <.div(^.cls := "email-content-controls pure-u-1-2",
               <.button(^.cls := "secondary-button pure-button", "change room name", ^.onClick ==> changeRoomName),
-              <.button(^.cls := "secondary-button pure-button", "remove room")
+              <.button(^.cls := "secondary-button pure-button", "remove room", ^.onClick ==> removeRoom)
             )
           )
         ),

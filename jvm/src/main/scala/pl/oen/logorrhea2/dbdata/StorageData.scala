@@ -6,6 +6,7 @@ import reactivemongo.bson.{BSONDocumentReader, BSONDocumentWriter, Macros}
 object StorageData {
   val CONFIGS_COLLECTION_NAME = "configs"
   val ROOMS_COLLECTION_NAME = "rooms"
+  val ROOMS_REMOVED_COLLECTION_NAME = "roomsRemoved"
 
   case class ConfigState(userCounter: Int)
   case class RoomState(name: String, msgs: Vector[Msg] = Vector())

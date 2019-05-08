@@ -18,6 +18,8 @@ trait MongoService[F[_]] {
   def createRoom(roomInfo: RoomInfo[F]): F[Unit]
   def changeRoomName(newRoomName: String, oldRoomName: String): F[Unit]
   def addMsg(roomName: String, msg: Msg): F[Unit]
+  def removeRoom(roomInfo: RoomInfo[F]): F[Unit]
+  def reviveRoom(roomName: String): F[Option[RoomInfo[F]]]
 }
 
 object MongoService {
@@ -41,7 +43,8 @@ object MongoService {
       db <- connectToDb()
       dbConfig = db.collection(StorageData.CONFIGS_COLLECTION_NAME): BSONCollection
       dbRooms = db.collection(StorageData.ROOMS_COLLECTION_NAME): BSONCollection
-      mongoService = new MongoServiceImpl[F](dbConfig, dbRooms, dbEc)
+      dbRoomsRemoved = db.collection(StorageData.ROOMS_REMOVED_COLLECTION_NAME): BSONCollection
+      mongoService = MongoServiceImpl[F](dbConfig, dbRooms, dbRoomsRemoved, dbEc)
     } yield mongoService
   }
 }
